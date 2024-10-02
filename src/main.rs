@@ -1,5 +1,5 @@
 mod tui;
 
 fn main() {
-    tui::simple_ui();
+    tui::tui_run();
 }
