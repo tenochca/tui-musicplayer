@@ -15,6 +15,20 @@ pub fn list_folders(music_directory: &str) -> Vec<String> {
     .collect() //collect all valid entries into Vec
 }
 
+pub fn list_files(music_directory: &str) -> Vec<String> {
+    fs::read_dir(music_directory) //read the contents of the directory
+    .unwrap() //handles errors
+    .filter_map(|entry| { //iterates through directory
+        let entry = entry.unwrap();
+        if entry.path().is_file() { //checks if entry is a file
+            Some(entry.file_name().into_string().unwrap()) //valid entries get turned into strings
+        } else {
+            None
+        }
+    })
+    .collect() //collect all valid entries into Vec
+}
+
 
 
 pub fn tui_run () {
