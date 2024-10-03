@@ -1,5 +1,10 @@
 use cursive::{event::Key, menu, views::Dialog};
 use std::fs;
+extern crate cursive_table_view;
+
+struct SongItem {
+    name: String,
+}
 
 pub fn list_folders(music_directory: &str) -> Vec<String> {
     fs::read_dir(music_directory) //read the contents of the directory
