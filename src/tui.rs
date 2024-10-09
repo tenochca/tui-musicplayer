@@ -18,6 +18,19 @@ pub struct SongItem {
     track_length: usize,
 }
 
+#[derive(Clone, Debug)]
+struct AlbumItem {
+    album: String,
+    artist: String,
+    songs: Vec<SongItem>,
+}
+
+#[derive(Clone, Debug)]
+struct ArtistItem {
+    artist: String,
+    albums: Vec<AlbumItem>,
+}
+
 
 impl Column {
     fn as_str(&self) -> &str {
@@ -92,6 +105,7 @@ pub fn populate_song_vec(album_directory: &str) -> Vec<SongItem> {
         .collect()
 }
 
+
 pub fn tui_run () {
     let mut siv = cursive::default();
 
@@ -109,6 +123,7 @@ pub fn tui_run () {
         artists_menu.add_leaf(artist, |_| {});
 
         for album in albums { //for each album we populate the menu with it
+            let albums_directory = format!("{}/{}", artist_directory, album);
             albums_menu.add_leaf(album, |_| {});
         }
     }
@@ -139,7 +154,6 @@ pub fn tui_run () {
     song_table.set_items(items);
 
     siv.add_layer(Dialog::around(song_table.with_name("table").min_size((50, 20))).title("Tracks"));
-
 
 
     //siv.add_layer(Dialog::text("Hit <Esc> to show the menu!"));
