@@ -1,7 +1,7 @@
 use audiotags::Tag;
 use cursive::{event::Key, menu, view::{Nameable, Resizable}, views::Dialog};
 use cursive_table_view::{TableView, TableViewItem};
-use std::{cmp::Ordering, fmt::format, fs, path::Path, vec};
+use std::{cmp::Ordering, fs, path::Path};
 use cursive::align::HAlign;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -123,11 +123,16 @@ pub fn tui_run () {
         artists_menu.add_leaf(artist, |_| {});
 
         for album in albums { //for each album we populate the menu with it
-            let albums_directory = format!("{}/{}", artist_directory, album);
-            albums_menu.add_leaf(album, |_| {});
+            let album_directory = format!("{}/{}", artist_directory, album);
+            albums_menu.add_leaf(&album, move |s| {
+                let items = populate_song_vec(&album_directory);
+                s.call_on_name("table", |table: &mut TableView<SongItem, Column>| {
+                    table.set_items(items);
+                });
+
+            });
         }
     }
-    
 
 
     siv.menubar().add_subtree("Albums", albums_menu)
@@ -138,22 +143,16 @@ pub fn tui_run () {
 
     siv.add_global_callback(Key::Esc, |s| s.select_menubar());
 
-    let mut song_table = TableView::<SongItem, Column>::new()
-        .column(Column::Song, "Track", |c| c.width_percent(20))
-        .column(Column::Artist, "Artist", |c| c.align(HAlign::Center))
+    let song_table = TableView::<SongItem, Column>::new()
+        .column(Column::Song, "Track", |c| c.width_percent(35))
+        .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(20))
         .column(Column::TrackLength, "Track Length", |c| {
             c.ordering(Ordering::Greater)
                 .align(HAlign::Right)
-                .width_percent(20)
+                .width_percent(40)
         });
-        
-        let album_dir: &str = r"C:\Users\tenoc\Music\RadioHead\Fake Plastic Trees";
-        let items = populate_song_vec(album_dir);
- 
 
-    song_table.set_items(items);
-
-    siv.add_layer(Dialog::around(song_table.with_name("table").min_size((50, 20))).title("Tracks"));
+    siv.add_layer(Dialog::around(song_table.with_name("table").min_size((50, 20))).title("FAKE PLASTIC TREES"));
 
 
     //siv.add_layer(Dialog::text("Hit <Esc> to show the menu!"));
