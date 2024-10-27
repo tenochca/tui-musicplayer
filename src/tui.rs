@@ -5,10 +5,15 @@ use std::{cmp::Ordering, fs, path::Path};
 use cursive::align::HAlign;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-enum Column {
+enum SongColumn {
     Song,
     Artist,
     TrackLength,
+}
+
+enum AlbumColumn {
+    Album, 
+    Artist,
 }
 
 #[derive(Clone, Debug)]
@@ -32,34 +37,34 @@ struct ArtistItem {
 }
 
 
-impl Column {
+impl SongColumn {
     fn as_str(&self) -> &str {
         match *self {
-            Column::Song => "Song Name",
-            Column::Artist => "Artist",
-            Column::TrackLength => "Track Length",
+            SongColumn::Song => "Song Name",
+            SongColumn::Artist => "Artist",
+            SongColumn::TrackLength => "Track Length",
         }
     }
 }
 
-impl TableViewItem<Column> for SongItem {
+impl TableViewItem<SongColumn> for SongItem {
     //converts the column into a string
-    fn to_column(&self, column: Column) -> String {
+    fn to_column(&self, column: SongColumn) -> String {
         match column {
-            Column::Song => self.song.to_string(),
-            Column::Artist => self.artist.to_string(),
-            Column::TrackLength => format!("{}", self.track_length),
+            SongColumn::Song => self.song.to_string(),
+            SongColumn::Artist => self.artist.to_string(),
+            SongColumn::TrackLength => format!("{}", self.track_length),
         }
     }
 
-    fn cmp(&self, other: &Self, column: Column) -> Ordering
+    fn cmp(&self, other: &Self, column: SongColumn) -> Ordering
     where
         Self: Sized,
     {
         match column {
-            Column::Song => self.song.cmp(&other.song),
-            Column::Artist => self.artist.cmp(&other.artist),
-            Column::TrackLength => self.track_length.cmp(&other.track_length),
+            SongColumn::Song => self.song.cmp(&other.song),
+            SongColumn::Artist => self.artist.cmp(&other.artist),
+            SongColumn::TrackLength => self.track_length.cmp(&other.track_length),
         }
     }
 }
@@ -126,7 +131,7 @@ pub fn tui_run () {
             let album_directory = format!("{}/{}", artist_directory, album);
             albums_menu.add_leaf(&album, move |s| {
                 let items = populate_song_vec(&album_directory);
-                s.call_on_name("table", |table: &mut TableView<SongItem, Column>| {
+                s.call_on_name("table", |table: &mut TableView<SongItem, SongColumn>| {
                     table.set_items(items);
                 });
 
@@ -143,10 +148,10 @@ pub fn tui_run () {
 
     siv.add_global_callback(Key::Esc, |s| s.select_menubar());
 
-    let song_table = TableView::<SongItem, Column>::new()
-        .column(Column::Song, "Track", |c| c.width_percent(35))
-        .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(20))
-        .column(Column::TrackLength, "Track Length", |c| {
+    let song_table = TableView::<SongItem, SongColumn>::new()
+        .column(SongColumn::Song, "Track", |c| c.width_percent(35))
+        .column(SongColumn::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(20))
+        .column(SongColumn::TrackLength, "Track Length", |c| {
             c.ordering(Ordering::Greater)
                 .align(HAlign::Right)
                 .width_percent(40)
