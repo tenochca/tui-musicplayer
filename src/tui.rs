@@ -174,9 +174,7 @@ pub fn tui_run() {
         let artist_name = artist.clone();
         let artist_directory_clone = artist_directory.clone();
         artists_menu.add_leaf(artist, move |s| {
-            let items = populate_album_vec(&artist_directory_clone);
-            //println!("{:?}", items);
-            //s.pop_layer();
+            s.pop_layer();
             let album_dialog = Dialog::around(TableView::<AlbumItem, Column>::new()
                 .column(Column::Album, "Album", |c| c.width_percent(50))
                 .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(50))
@@ -185,6 +183,8 @@ pub fn tui_run() {
                 .title(&format!("Albums - {}", artist_name))
                 .with_name("album_dialog");
             s.add_layer(album_dialog);
+            let items = populate_album_vec(&artist_directory_clone);
+            //println!("{:?}", items);
             s.call_on_name("album_table", |table: &mut TableView<AlbumItem, Column>| {
                 table.set_items(items);
             });
@@ -194,7 +194,6 @@ pub fn tui_run() {
             let album_directory = format!("{}/{}", artist_directory, album);
             let album_name = album.clone();
             albums_menu.add_leaf(album, move |s| {
-                let items = populate_song_vec(&album_directory);
                 //s.pop_layer();
                 s.pop_layer();
                 let song_dialog = Dialog::around(TableView::<SongItem, Column>::new()
@@ -210,6 +209,7 @@ pub fn tui_run() {
                     .title(&format!("Tracks - {}", album_name))
                     .with_name("song_dialog");
                     s.add_layer(song_dialog);
+                    let items = populate_song_vec(&album_directory);
                     s.call_on_name("song_table", |table: &mut TableView<SongItem, Column>| {
                         table.set_items(items);
                     });
