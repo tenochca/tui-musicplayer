@@ -5,15 +5,11 @@ use std::{cmp::Ordering, fs, path::Path};
 use cursive::align::HAlign;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-enum SongColumn {
+enum Column {
     Song,
     Artist,
+    Album,
     TrackLength,
-}
-
-enum AlbumColumn {
-    Album, 
-    Artist,
 }
 
 #[derive(Clone, Debug)]
@@ -37,34 +33,58 @@ struct ArtistItem {
 }
 
 
-impl SongColumn {
+impl Column {
     fn as_str(&self) -> &str {
         match *self {
-            SongColumn::Song => "Song Name",
-            SongColumn::Artist => "Artist",
-            SongColumn::TrackLength => "Track Length",
+            Column::Song => "Song Name",
+            Column::Artist => "Artist",
+            Column::Album => "Album",
+            Column::TrackLength => "Track Length",
         }
     }
 }
 
-impl TableViewItem<SongColumn> for SongItem {
+impl TableViewItem<Column> for SongItem {
     //converts the column into a string
-    fn to_column(&self, column: SongColumn) -> String {
+    fn to_column(&self, column: Column) -> String {
         match column {
-            SongColumn::Song => self.song.to_string(),
-            SongColumn::Artist => self.artist.to_string(),
-            SongColumn::TrackLength => format!("{}", self.track_length),
+            Column::Song => self.song.to_string(),
+            Column::Artist => self.artist.to_string(),
+            Column::TrackLength => format!("{}", self.track_length),
+            Column::Album => todo!(),
         }
     }
 
-    fn cmp(&self, other: &Self, column: SongColumn) -> Ordering
+    fn cmp(&self, other: &Self, column: Column) -> Ordering
     where
         Self: Sized,
     {
         match column {
-            SongColumn::Song => self.song.cmp(&other.song),
-            SongColumn::Artist => self.artist.cmp(&other.artist),
-            SongColumn::TrackLength => self.track_length.cmp(&other.track_length),
+            Column::Song => self.song.cmp(&other.song),
+            Column::Artist => self.artist.cmp(&other.artist),
+            Column::TrackLength => self.track_length.cmp(&other.track_length),
+            Column::Album => todo!(),
+        }
+    }
+}
+
+impl TableViewItem<Column> for AlbumItem {
+    fn to_column(&self, column: Column) -> String {
+        match column {
+            Column::Album => self.album.clone(),
+            Column::Artist => self.artist.clone(),
+            _ => "".to_string(),
+        }
+    }
+
+    fn cmp(&self, other: &Self, column: Column) -> Ordering
+    where
+        Self: Sized,
+    {
+        match column {
+            Column::Album => self.album.cmp(&other.album),
+            Column::Artist => self.artist.cmp(&other.artist),
+            _ => Ordering::Equal,
         }
     }
 }
@@ -110,57 +130,117 @@ pub fn populate_song_vec(album_directory: &str) -> Vec<SongItem> {
         .collect()
 }
 
+fn populate_album_vec(artist_directory: &str) -> Vec<AlbumItem> {
+    let artist_path = Path::new(artist_directory);
+    let artist = artist_path.file_name().unwrap().to_str().unwrap().to_string();
 
-pub fn tui_run () {
+    fs::read_dir(artist_directory)
+        .unwrap()
+        .filter_map(|entry| {
+            let entry = entry.unwrap();
+            if entry.path().is_dir() {
+                let album_path = entry.path();
+                let album = album_path.file_name().unwrap().to_str().unwrap().to_string();
+                let songs = populate_song_vec(album_path.to_str().unwrap());
+
+                Some(AlbumItem {
+                    album,
+                    artist: artist.clone(),
+                    songs,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+
+
+pub fn tui_run() {
     let mut siv = cursive::default();
 
-    //hard coded path to music
+    // Hard coded path to music
     let music_directory = r"C:\Users\tenoc\Music";
 
-    //Assume the folders in the dir are all artists & their sub folders are all albums
+    // Assume the folders in the dir are all artists & their sub folders are all albums
     let artists = list_folders(music_directory);
-    let mut albums_menu = menu::Tree::new(); //instantiate empty menu to populate
-    let mut artists_menu = menu::Tree::new(); //empty artist menu
+    let mut albums_menu = menu::Tree::new(); // Instantiate empty menu to populate
+    let mut artists_menu = menu::Tree::new(); // Empty artist menu
 
-    for artist in &artists { //loop through the artist dirs and format new paths to pass to list_folders
+    for artist in &artists { // Loop through the artist dirs and format new paths to pass to list_folders
         let artist_directory = format!("{}/{}", music_directory, artist);
         let albums = list_folders(&artist_directory);
-        artists_menu.add_leaf(artist, |_| {});
+        let artist_name = artist.clone();
+        let artist_directory_clone = artist_directory.clone();
+        artists_menu.add_leaf(artist, move |s| {
+            let items = populate_album_vec(&artist_directory_clone);
+            //println!("{:?}", items);
+            //s.pop_layer();
+            let album_dialog = Dialog::around(TableView::<AlbumItem, Column>::new()
+                .column(Column::Album, "Album", |c| c.width_percent(50))
+                .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(50))
+                .with_name("album_table")
+                .min_size((50, 20)))
+                .title(&format!("Albums - {}", artist_name))
+                .with_name("album_dialog");
+            s.add_layer(album_dialog);
+            s.call_on_name("album_table", |table: &mut TableView<AlbumItem, Column>| {
+                table.set_items(items);
+            });
+        });
 
-        for album in albums { //for each album we populate the menu with it
+        for album in &albums { // For each album we populate the menu with it
             let album_directory = format!("{}/{}", artist_directory, album);
-            albums_menu.add_leaf(&album, move |s| {
+            let album_name = album.clone();
+            albums_menu.add_leaf(album, move |s| {
                 let items = populate_song_vec(&album_directory);
-                s.call_on_name("table", |table: &mut TableView<SongItem, SongColumn>| {
-                    table.set_items(items);
-                });
-
+                //s.pop_layer();
+                s.pop_layer();
+                let song_dialog = Dialog::around(TableView::<SongItem, Column>::new()
+                    .column(Column::Song, "Track", |c| c.width_percent(35))
+                    .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(20))
+                    .column(Column::TrackLength, "Track Length", |c| {
+                        c.ordering(Ordering::Greater)
+                            .align(HAlign::Right)
+                            .width_percent(40)
+                    })
+                    .with_name("song_table")
+                    .min_size((50, 20)))
+                    .title(&format!("Tracks - {}", album_name))
+                    .with_name("song_dialog");
+                    s.add_layer(song_dialog);
+                    s.call_on_name("song_table", |table: &mut TableView<SongItem, Column>| {
+                        table.set_items(items);
+                    });
             });
         }
     }
 
-
-    siv.menubar().add_subtree("Albums", albums_menu)
-    .add_subtree("Artists", artists_menu)       
-    .add_delimiter()
-    .add_leaf("Quit", |s| s.quit());
-
+    siv.menubar().add_subtree("Artists", artists_menu)
+        .add_subtree("Albums", albums_menu)
+        .add_delimiter()
+        .add_leaf("Quit", |s| s.quit());
 
     siv.add_global_callback(Key::Esc, |s| s.select_menubar());
 
-    let song_table = TableView::<SongItem, SongColumn>::new()
-        .column(SongColumn::Song, "Track", |c| c.width_percent(35))
-        .column(SongColumn::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(20))
-        .column(SongColumn::TrackLength, "Track Length", |c| {
+    let album_table = TableView::<AlbumItem, Column>::new()
+        .column(Column::Album, "Album", |c| c.width_percent(50))
+        .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(50))
+        .with_name("album_table");
+
+    let song_table = TableView::<SongItem, Column>::new()
+        .column(Column::Song, "Track", |c| c.width_percent(35))
+        .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(20))
+        .column(Column::TrackLength, "Track Length", |c| {
             c.ordering(Ordering::Greater)
                 .align(HAlign::Right)
                 .width_percent(40)
-        });
+        })
+        .with_name("song_table");
 
-    siv.add_layer(Dialog::around(song_table.with_name("table").min_size((50, 20))).title("FAKE PLASTIC TREES"));
-
-
-    //siv.add_layer(Dialog::text("Hit <Esc> to show the menu!"));
+    //siv.add_layer(Dialog::around(album_table.min_size((50, 20))).title("Albums").with_name("dialog"));
+    //siv.add_layer(Dialog::around(song_table.min_size((50, 20))).title("Tracks").with_name("dialog"));
 
     siv.run();
 }
