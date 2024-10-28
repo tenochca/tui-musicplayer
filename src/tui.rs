@@ -181,7 +181,7 @@ pub fn tui_run(music_directory: &str) {
     
     siv.add_layer(
         Dialog::new()
-            .title("Enter your name")
+            .title("Enter your music folder")
             // Padding is (left, right, top, bottom)
             .padding_lrtb(1, 1, 1, 0)
             .content(

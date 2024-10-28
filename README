@@ -1,0 +1,9 @@
+--HOW TO RUN--
+1. Run command: cargo build
+2. run executable at target/debug/media_player.exe
+    media_player.exe <path to your music folder>
+3. App will prompt you to enter your music folder again. This does not work!! But you may input whatever you
+    like and it will display a nice message :)
+4. To access the menu bar press ESCAPE
+5. Music files will be sorted in hierarchical arder (ARTIST -> ALBUM -> SONG)
+5. Selecting either an artist or album from the menu bar will display its contents in a table
