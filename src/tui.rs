@@ -1,8 +1,9 @@
 use audiotags::Tag;
-use cursive::{event::Key, menu, view::{Nameable, Resizable}, views::Dialog};
+use cursive::{direction::Direction, event::Key, menu, view::{Nameable, Resizable}, views::{Dialog, EditView, TextView}, Cursive};
 use cursive_table_view::{TableView, TableViewItem};
 use std::{cmp::Ordering, fs, path::Path};
 use cursive::align::HAlign;
+
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum Column {
@@ -156,12 +157,62 @@ fn populate_album_vec(artist_directory: &str) -> Vec<AlbumItem> {
 }
 
 
+fn show_popup(s: &mut Cursive, name: &str) {
+    if name.is_empty() {
+        // Try again as many times as we need!
+        s.add_layer(Dialog::info("Please enter your music directory!"));
+    } else {
+        let content = format!("Music Directory set to ... \n{name}\n Press <ESC> to pull up menu bar");
+        // Remove the initial popup
+        s.pop_layer();
+        // And put a new one instead
+        s.add_layer(Dialog::around(TextView::new(content)));
+    }
+}
 
-pub fn tui_run() {
+
+
+
+pub fn tui_run(music_directory: &str) {
     let mut siv = cursive::default();
 
-    // Hard coded path to music
-    let music_directory = r"C:\Users\tenoc\Music";
+    //let music_directory = r"C:/Users/tenoc/Music";
+
+    
+    siv.add_layer(
+        Dialog::new()
+            .title("Enter your name")
+            // Padding is (left, right, top, bottom)
+            .padding_lrtb(1, 1, 1, 0)
+            .content(
+                EditView::new()
+                    // Call `show_popup` when the user presses `Enter`
+                    .on_submit(show_popup)
+                    // Give the `EditView` a name so we can refer to it later.
+                    .with_name("name")
+                    // Wrap this in a `ResizedView` with a fixed width.
+                    // Do this _after_ `with_name` or the name will point to the
+                    // `ResizedView` instead of `EditView`!
+                    .fixed_width(20),
+            )
+            .button("Ok", |s| {
+                // This will run the given closure, *ONLY* if a view with the
+                // correct type and the given name is found.
+                let name = s
+                    .call_on_name("name", |view: &mut EditView| {
+                        // We can return content from the closure!
+                        view.get_content()
+                    })
+                    .unwrap();
+
+                // Run the next step
+                show_popup(s, &name);
+            }),
+    );
+
+    //siv.set_user_data(music_directory);
+    //print!("{}", music_directory);
+
 
     // Assume the folders in the dir are all artists & their sub folders are all albums
     let artists = list_folders(music_directory);
@@ -223,21 +274,6 @@ pub fn tui_run() {
         .add_leaf("Quit", |s| s.quit());
 
     siv.add_global_callback(Key::Esc, |s| s.select_menubar());
-
-    let album_table = TableView::<AlbumItem, Column>::new()
-        .column(Column::Album, "Album", |c| c.width_percent(50))
-        .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(50))
-        .with_name("album_table");
-
-    let song_table = TableView::<SongItem, Column>::new()
-        .column(Column::Song, "Track", |c| c.width_percent(35))
-        .column(Column::Artist, "Artist", |c| c.align(HAlign::Center).width_percent(20))
-        .column(Column::TrackLength, "Track Length", |c| {
-            c.ordering(Ordering::Greater)
-                .align(HAlign::Right)
-                .width_percent(40)
-        })
-        .with_name("song_table");
 
     //siv.add_layer(Dialog::around(album_table.min_size((50, 20))).title("Albums").with_name("dialog"));
     //siv.add_layer(Dialog::around(song_table.min_size((50, 20))).title("Tracks").with_name("dialog"));
