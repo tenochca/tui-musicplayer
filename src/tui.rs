@@ -1,8 +1,10 @@
-use audiotags::Tag;
-use cursive::{direction::Direction, event::Key, menu, view::{Nameable, Resizable}, views::{Dialog, EditView, TextView}, Cursive};
+use cursive::{event::Key, menu, view::{Nameable, Resizable}, views::{Dialog, EditView, TextView}, Cursive};
 use cursive_table_view::{TableView, TableViewItem};
 use std::{cmp::Ordering, fs, path::Path};
 use cursive::align::HAlign;
+use std::sync::Arc;
+use crate::audio;
+
 
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -182,25 +184,18 @@ pub fn tui_run(music_directory: &str) {
     siv.add_layer(
         Dialog::new()
             .title("Enter your music folder")
-            // Padding is (left, right, top, bottom)
             .padding_lrtb(1, 1, 1, 0)
             .content(
                 EditView::new()
-                    // Call `show_popup` when the user presses `Enter`
+                    // Call show_popup when the user presses enter
                     .on_submit(show_popup)
-                    // Give the `EditView` a name so we can refer to it later.
                     .with_name("name")
-                    // Wrap this in a `ResizedView` with a fixed width.
-                    // Do this _after_ `with_name` or the name will point to the
-                    // `ResizedView` instead of `EditView`!
                     .fixed_width(20),
             )
             .button("Ok", |s| {
-                // This will run the given closure, *ONLY* if a view with the
-                // correct type and the given name is found.
                 let name = s
                     .call_on_name("name", |view: &mut EditView| {
-                        // We can return content from the closure!
+                        // return content from closure
                         view.get_content()
                     })
                     .unwrap();
@@ -209,9 +204,6 @@ pub fn tui_run(music_directory: &str) {
                 show_popup(s, &name);
             }),
     );
-
-    //siv.set_user_data(music_directory);
-    //print!("{}", music_directory);
 
 
     // Assume the folders in the dir are all artists & their sub folders are all albums
@@ -241,11 +233,11 @@ pub fn tui_run(music_directory: &str) {
             });
         });
 
-        for album in &albums { // For each album we populate the menu with it
+        for album in &albums {
             let album_directory = format!("{}/{}", artist_directory, album);
             let album_name = album.clone();
+            let album_directory_clone = Arc::new(album_directory.clone()); // Wrap in Arc
             albums_menu.add_leaf(album, move |s| {
-                //s.pop_layer();
                 s.pop_layer();
                 let song_dialog = Dialog::around(TableView::<SongItem, Column>::new()
                     .column(Column::Song, "Track", |c| c.width_percent(35))
@@ -255,15 +247,25 @@ pub fn tui_run(music_directory: &str) {
                             .align(HAlign::Right)
                             .width_percent(40)
                     })
+                    .on_submit({
+                        let album_directory_clone = Arc::clone(&album_directory_clone); // Clone the Arc
+                        move |s, row, _index| {
+                            let song_table = s.find_name::<TableView<SongItem, Column>>("song_table").unwrap();
+                            let song_item = song_table.borrow_item(row).unwrap();
+                            let song_path = format!("{}/{}", album_directory_clone, song_item.song); // Use the cloned Arc
+                            //println!("{}", song_path);
+                            audio::play_audio(&song_path, s);
+                        }
+                    })
                     .with_name("song_table")
                     .min_size((50, 20)))
                     .title(&format!("Tracks - {}", album_name))
                     .with_name("song_dialog");
-                    s.add_layer(song_dialog);
-                    let items = populate_song_vec(&album_directory);
-                    s.call_on_name("song_table", |table: &mut TableView<SongItem, Column>| {
-                        table.set_items(items);
-                    });
+                s.add_layer(song_dialog);
+                let items = populate_song_vec(&album_directory);
+                s.call_on_name("song_table", |table: &mut TableView<SongItem, Column>| {
+                    table.set_items(items);
+                });
             });
         }
     }
