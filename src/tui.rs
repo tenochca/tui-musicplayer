@@ -17,7 +17,7 @@ enum Column {
 
 #[derive(Clone, Debug)]
 pub struct SongItem {
-    song: String,
+    pub song: String,
     artist: String,
     track_length: usize,
 }
@@ -254,7 +254,7 @@ pub fn tui_run(music_directory: &str) {
                             let song_item = song_table.borrow_item(row).unwrap();
                             let song_path = format!("{}/{}", album_directory_clone, song_item.song); // Use the cloned Arc
                             //println!("{}", song_path);
-                            audio::play_audio(&song_path, s);
+                            audio::play_audio(&song_path, s,  song_item);
                         }
                     })
                     .with_name("song_table")
