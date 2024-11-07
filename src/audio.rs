@@ -21,3 +21,6 @@ pub fn play_audio(file_path: &str, s: &mut Cursive, song_item: &SongItem) {
         audio.wait(); // Block until the sound finishes playing
     });
 }
+
+//TODO: find a way to stop the song table from being cleared. Find a way to queueu songs. Allow user to select album and be show the songs
+// Get user directpory input working

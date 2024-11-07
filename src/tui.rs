@@ -29,12 +29,6 @@ struct AlbumItem {
     songs: Vec<SongItem>,
 }
 
-#[derive(Clone, Debug)]
-struct ArtistItem {
-    artist: String,
-    albums: Vec<AlbumItem>,
-}
-
 
 impl Column {
     fn as_str(&self) -> &str {
